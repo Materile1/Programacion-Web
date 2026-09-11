@@ -1,3 +1,4 @@
+import json
 from sqlalchemy import select
 from app.database import Base, SessionLocal, engine
 from app.models import Challenge, LearningPath, Level, User
@@ -20,7 +21,7 @@ def seed():
         for index, title, skill in LEVELS:
             level = Level(path_id=path.id, number=index, title=title, skill=skill, status="completed" if index < 4 else ("active" if index == 4 else "locked"))
             db.add(level); db.flush()
-            db.add(Challenge(level_id=level.id, title=f"Reto {index + 1}: {title}", prompt=f"Practica {skill.lower()} con una solución clara y verificable.", starter_code="def solve(data):\n    # escribe tu solución\n    return data\n"))
+            db.add(Challenge(level_id=level.id, title=f"Reto {index + 1}: {title}", prompt=f"Practica {skill.lower()} con una solución clara y verificable.", starter_code="def solve(data):\n    # escribe tu solución\n    return data\n", test_cases=json.dumps([{"input": 1, "output": 1}, {"input": 0, "output": 0}, {"input": -1, "output": -1}])))
         db.add(User(email="demo@devcoach.app", name="Alex Rivera", password_hash=hash_password("devcoach123"), level=7, streak=12))
         db.commit()
 

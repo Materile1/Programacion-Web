@@ -13,4 +13,4 @@ COPY backend ./backend
 COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 ENV PYTHONPATH=/app/backend
 EXPOSE 8000
-CMD ["sh", "-c", "cd backend && python seed.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "cd backend && alembic upgrade head && python seed.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

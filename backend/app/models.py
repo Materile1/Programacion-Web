@@ -11,6 +11,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     name: Mapped[str] = mapped_column(String(120))
+    avatar: Mapped[str | None] = mapped_column(String(500), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     level: Mapped[int] = mapped_column(Integer, default=7)
     streak: Mapped[int] = mapped_column(Integer, default=12)
@@ -45,6 +46,7 @@ class Challenge(Base):
     language: Mapped[str] = mapped_column(String(30), default="python")
     difficulty: Mapped[str] = mapped_column(String(30), default="Intermedio")
     starter_code: Mapped[str] = mapped_column(Text)
+    test_cases: Mapped[str] = mapped_column(Text, default="[]")
     level: Mapped[Level] = relationship(back_populates="challenges")
 
 class Submission(Base):

@@ -19,11 +19,13 @@ npm install
 npm run dev
 ```
 
-Abre `http://localhost:5173`. La demo funciona sin login; para persistencia registra un usuario contra `POST /api/auth/register` y guarda el JWT como `devcoach_token`.
+Abre `http://localhost:5173`. Configura `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `VITE_GOOGLE_CLIENT_ID` en `.env` para iniciar sesión con Google. El frontend guarda el JWT en `localStorage` y el ejecutor usa el daemon Docker del host.
 
 ## Docker
 
 `docker compose up --build` levanta PostgreSQL, la API en `http://localhost:8000` y el frontend en `http://localhost:5173`. La documentación OpenAPI queda en `http://localhost:8000/docs`.
+
+Para probar la ejecución, inicia sesión, abre `Práctica guiada`, edita `solve(data)` y pulsa `Ejecutar`. La API compara la salida con los casos del seed y guarda una entrega aprobada en `/api/progress`.
 
 ## CI/CD
 

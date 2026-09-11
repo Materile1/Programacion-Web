@@ -1,5 +1,6 @@
+import json
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -19,6 +20,7 @@ class UserOut(BaseModel):
     id: int
     email: EmailStr
     name: str
+    avatar: str | None = None
     level: int
     streak: int
 
@@ -30,6 +32,12 @@ class ChallengeOut(BaseModel):
     language: str
     difficulty: str
     starter_code: str
+    test_cases: list[dict] = []
+
+    @field_validator("test_cases", mode="before")
+    @classmethod
+    def parse_test_cases(cls, value):
+        return json.loads(value) if isinstance(value, str) else value
 
 class LevelOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -51,6 +59,26 @@ class SubmissionOut(BaseModel):
     quality: float
     feedback: str
     next_review_at: datetime
+
+class ProgressOut(BaseModel):
+    level: int
+    streak: int
+    completed_challenges: int
+    total_submissions: int
+
+class GoogleTokenRequest(BaseModel):
+    id_token: str
+
+class ExecuteRequest(BaseModel):
+    challenge_id: int
+    code: str = Field(min_length=1, max_length=20000)
+    language: str = Field(default="python", pattern="^(python|javascript)$")
+
+class ExecuteOut(BaseModel):
+    stdout: str
+    stderr: str
+    passed: bool
+    feedback: str
 
 class TutorRequest(BaseModel):
     question: str = Field(min_length=2, max_length=2000)

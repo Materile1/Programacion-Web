@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     app_name: str = "DevCoach API"
     database_url: str = "sqlite:///./devcoach.db"
     jwt_secret: str = "devcoach-local-secret-change-me"
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
     jwt_algorithm: str = "HS256"
     access_token_minutes: int = 60 * 24
     cors_origins: str = "http://localhost:5173,http://localhost:4173"

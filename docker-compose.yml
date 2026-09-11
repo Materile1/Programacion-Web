@@ -20,13 +20,20 @@ services:
       DATABASE_URL: postgresql+psycopg://devcoach:devcoach@db:5432/devcoach
       JWT_SECRET: local-compose-secret-change-me
       CORS_ORIGINS: http://localhost:5173
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     ports:
       - "5173:80"
     depends_on:
