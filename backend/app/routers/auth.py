@@ -17,7 +17,9 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
     if db.scalar(select(User).where(User.email == payload.email)):
         raise HTTPException(409, "El email ya está registrado")
     user = User(email=payload.email, name=payload.name.strip(), password_hash=hash_password(payload.password))
-    db.add(user); db.commit(); db.refresh(user)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
     return Token(access_token=create_access_token(str(user.id)))
 
 @router.post("/login", response_model=Token)

@@ -3,7 +3,7 @@ import { GoogleLogin, type CredentialResponse } from '@react-oauth/google'
 import { api } from './api'
 
 export type User = { id: number; email: string; name: string; avatar?: string | null; level: number; streak: number }
-type AuthContextValue = { user: User | null; token: string | null; loading: boolean; signInWithGoogle: (response: CredentialResponse) => Promise<void>; signOut: () => void }
+type AuthContextValue = { user: User | null; token: string | null; loading: boolean; signInWithGoogle: (response: CredentialResponse) => Promise<void>; signInWithPassword: (email: string, password: string) => Promise<void>; registerWithPassword: (name: string, email: string, password: string) => Promise<void>; signOut: () => void }
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -20,10 +20,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!response.credential) throw new Error('Google no devolvió una credencial')
     const session = await api<{ access_token: string }>('/auth/google/callback', { method: 'POST', body: JSON.stringify({ id_token: response.credential }) })
     localStorage.setItem('devcoach_token', session.access_token)
+    setLoading(true)
     setToken(session.access_token)
   }
+  const setSession = (accessToken: string) => { localStorage.setItem('devcoach_token', accessToken); setLoading(true); setToken(accessToken) }
+  const signInWithPassword = async (email: string, password: string) => {
+    const session = await api<{ access_token: string }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
+    setSession(session.access_token)
+  }
+  const registerWithPassword = async (name: string, email: string, password: string) => {
+    const session = await api<{ access_token: string }>('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password }) })
+    setSession(session.access_token)
+  }
   const signOut = () => { localStorage.removeItem('devcoach_token'); setToken(null); setUser(null) }
-  return <AuthContext.Provider value={{ user, token, loading, signInWithGoogle, signOut }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, token, loading, signInWithGoogle, signInWithPassword, registerWithPassword, signOut }}>{children}</AuthContext.Provider>
 }
 
 export function GoogleSignIn() {

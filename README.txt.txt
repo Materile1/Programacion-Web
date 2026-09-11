@@ -1,2 +1,0 @@
-jaja
-primeros cambios

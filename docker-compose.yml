@@ -22,6 +22,8 @@ services:
       CORS_ORIGINS: http://localhost:5173
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     ports:

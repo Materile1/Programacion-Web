@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .database import Base, engine
@@ -11,12 +11,9 @@ app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origin_list, allo
 app.include_router(auth.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(training.router, prefix="/api")
+app.include_router(training.execution_router, prefix="/api")
 app.include_router(dashboard.progress_router, prefix="/api")
 app.include_router(training.progress_router, prefix="/api")
-
-@app.post("/api/execute", response_model=training.ExecuteOut, include_in_schema=False)
-def execute_root(payload: training.ExecuteRequest, db=Depends(training.get_db), user=Depends(training.current_user)):
-    return training.execute(payload, db, user)
 
 @app.get("/health")
 def health():
