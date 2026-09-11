@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: devcoach-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: devcoach-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+  - type: pserv
+    name: devcoach-db
+    runtime: postgres
+    plan: free
+    databaseName: devcoach
+    user: devcoach

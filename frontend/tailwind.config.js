@@ -1,0 +1,1 @@
+export default { content: ['./index.html','./src/**/*.{ts,tsx}'], theme: { extend: { colors: { ink: '#071018', panel: '#0d1a25', line: '#203441', mint: '#8ef4c2', aqua: '#7dd8ee', amber: '#f6c86d', coral: '#ff8e79' }, fontFamily: { display: ['Space Grotesk','sans-serif'], body: ['DM Sans','sans-serif'], mono: ['JetBrains Mono','monospace'] } } }, plugins: [] }
