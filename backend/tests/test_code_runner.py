@@ -38,3 +38,30 @@ def test_execute_code_stops_timeout():
 
     assert result["passed"] is False
     assert "agotado" in result["stderr"]
+
+
+def test_execute_javascript_returns_each_case():
+    result = code_runner.execute_code("function solve(data) { return data * 2; }", "javascript", json.dumps([
+        {"input": 2, "output": 4},
+        {"input": 3, "output": 6},
+    ]))
+
+    assert result["passed"] is True
+    assert all(item["passed"] for item in result["results"])
+
+
+def test_execute_javascript_reports_failure_and_syntax_error():
+    failed = code_runner.execute_code("function solve(data) { return data + 1; }", "javascript", json.dumps([{"input": 1, "output": 3}]))
+    invalid = code_runner.execute_code("function solve(data) {", "javascript", "[]")
+
+    assert failed["passed"] is False
+    assert failed["results"][0]["actual"] == 2
+    assert invalid["passed"] is False
+    assert invalid["stderr"]
+
+
+def test_execute_javascript_rejects_dangerous_api():
+    result = code_runner.execute_code("const fs = require('fs');\nfunction solve(data) { return data; }", "javascript", "[]")
+
+    assert result["passed"] is False
+    assert "bloqueada" in result["stderr"]

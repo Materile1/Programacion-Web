@@ -49,6 +49,22 @@ CHALLENGE_CONTENT = [
     ("Recibe una lista de registros con `status` y devuelve el porcentaje entero de registros con status `ok`. Para una lista vacía devuelve 0.", "def solve(data):\n    return round(sum(item.get('status') == 'ok' for item in data) / len(data) * 100) if data else 0\n", [{"input": [{"status": "ok"}, {"status": "error"}], "output": 50}, {"input": [], "output": 0}]),
 ]
 
+CONCEPT_PREFIXES = [
+    "Concepto clave: identidad de valores y valores falsy.\n\nCaso real: conserva los datos recibidos por un formulario.\n\n",
+    "Concepto clave: validación de entradas y acceso seguro a diccionarios.\n\nCaso real: valida los datos mínimos del perfil de un usuario.\n\n",
+    "Concepto clave: condicionales y operadores aritméticos.\n\nCaso real: clasifica una transacción para procesarla en un lote.\n\n",
+    "Concepto clave: acumuladores e iteración.\n\nCaso real: calcula el total de una cesta de compra.\n\n",
+    "Concepto clave: conjuntos para detectar duplicados y preservar orden.\n\nCaso real: limpia etiquetas de un formulario antes de guardarlas.\n\n",
+]
+
+JAVASCRIPT_CHALLENGE_CONTENT = [
+    ("Devuelve cualquier valor sin modificarlo, incluidos 0, false y una cadena vacía.", "function solve(data) {\n  return data;\n}\n", [{"input": 1, "output": 1}, {"input": 0, "output": 0}, {"input": "", "output": ""}]),
+    ("Recibe un objeto con nombre y edad y devuelve `nombre tiene edad años`. Si falta una propiedad, devuelve `Datos incompletos`.", "function solve(data) {\n  if (!data || typeof data !== 'object' || !('nombre' in data) || !('edad' in data)) {\n    return 'Datos incompletos';\n  }\n  return `${data.nombre} tiene ${data.edad} años`;\n}\n", [{"input": {"nombre": "Ana", "edad": 30}, "output": "Ana tiene 30 años"}, {"input": {}, "output": "Datos incompletos"}]),
+    ("Recibe un entero y devuelve `par` o `impar`, incluidos negativos y cero.", "function solve(data) {\n  return data % 2 === 0 ? 'par' : 'impar';\n}\n", [{"input": 4, "output": "par"}, {"input": -3, "output": "impar"}, {"input": 0, "output": "par"}]),
+    ("Recibe una lista de números y devuelve su suma. Para una lista vacía devuelve 0.", "function solve(data) {\n  return data.reduce((total, value) => total + value, 0);\n}\n", [{"input": [1, 2, 3], "output": 6}, {"input": [], "output": 0}, {"input": [-2, 5], "output": 3}]),
+    ("Recibe una lista y devuelve otra sin repetidos, conservando la primera aparición.", "function solve(data) {\n  return [...new Set(data)];\n}\n", [{"input": [1, 2, 1, 3], "output": [1, 2, 3]}, {"input": [], "output": []}]),
+]
+
 def seed():
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
@@ -64,15 +80,22 @@ def seed():
                 db.add(level)
                 db.flush()
             challenge_title = f"Reto {index + 1}: {title}"
-            prompt, starter_code, test_cases = CHALLENGE_CONTENT[index]
-            challenge = db.scalar(select(Challenge).where(Challenge.level_id == level.id, Challenge.title == challenge_title))
-            if not challenge:
-                challenge = Challenge(level_id=level.id, title=challenge_title, prompt=prompt, starter_code=starter_code, test_cases=json.dumps(test_cases))
-                db.add(challenge)
-            elif challenge.source == "seed":
-                challenge.prompt = prompt
-                challenge.starter_code = starter_code
-                challenge.test_cases = json.dumps(test_cases)
+            variants = [("python", CHALLENGE_CONTENT[index])]
+            if index < len(JAVASCRIPT_CHALLENGE_CONTENT):
+                variants.append(("javascript", JAVASCRIPT_CHALLENGE_CONTENT[index]))
+            for language, (prompt, starter_code, test_cases) in variants:
+                if language == "python" and index < len(CONCEPT_PREFIXES):
+                    prompt = CONCEPT_PREFIXES[index] + prompt
+                variant_title = challenge_title if language == "python" else f"{challenge_title} [JavaScript]"
+                challenge = db.scalar(select(Challenge).where(Challenge.level_id == level.id, Challenge.title == variant_title))
+                if not challenge:
+                    challenge = Challenge(level_id=level.id, title=variant_title, language=language, prompt=prompt, starter_code=starter_code, test_cases=json.dumps(test_cases))
+                    db.add(challenge)
+                elif challenge.source == "seed":
+                    challenge.language = language
+                    challenge.prompt = prompt
+                    challenge.starter_code = starter_code
+                    challenge.test_cases = json.dumps(test_cases)
         if not db.scalar(select(User).where(User.email == "demo@devcoach.app")):
             db.add(User(email="demo@devcoach.app", name="Alex Rivera", password_hash=hash_password("devcoach123"), level=0, streak=0))
         for title, language, code, issues in REVIEW_SNIPPETS:

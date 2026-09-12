@@ -3,6 +3,7 @@ export type Level = { id: number; number: number; title: string; skill: string; 
 export type Challenge = { id: number; title: string; prompt: string; language: string; difficulty: string; starter_code: string; completed?: boolean; test_cases?: { input: unknown; output: unknown }[] }
 export type News = { title: string; summary: string; url: string; source: string; kind: string }
 export type TestCaseResult = { input: unknown; expected: unknown; actual: unknown; passed: boolean }
+export type TutorResponse = { answer: string; mode: 'ai-configured' | 'local-socratic' | string }
 export type ReviewSnippet = { id: number; title: string; language: string; code: string; difficulty: string }
 export type ReviewFeedback = { detected: string[]; missed: string[]; score: number; feedback: string }
 export type InterviewQuestion = { id: number; kind: 'conceptual' | 'coding'; prompt: string; time_limit_seconds: number }
@@ -22,3 +23,4 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 }
 export const submitCode = (challengeId: number, code: string, language = 'python') => api<{ passed: boolean; score: number; quality: number; feedback: string; next_review_at: string }>('/progress', { method: 'POST', body: JSON.stringify({ challenge_id: challengeId, code, language }) })
 export const executeCode = (challengeId: number, code: string, language: string) => api<{ passed: boolean; stdout: string; stderr: string; feedback: string; results: TestCaseResult[] }>('/execute', { method: 'POST', body: JSON.stringify({ challenge_id: challengeId, code, language }) })
+export const askTutor = (question: string, context: string) => api<TutorResponse>('/training/tutor', { method: 'POST', body: JSON.stringify({ question, context }) })

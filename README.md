@@ -19,9 +19,11 @@ npm install
 npm run dev
 ```
 
-Abre `http://localhost:5173`. Configura `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `VITE_GOOGLE_CLIENT_ID` en `.env` para iniciar sesión con Google. El frontend guarda el JWT en `localStorage`. La ejecución de retos usa un subprocess de Python con AST, timeout y límites de CPU/memoria; no necesita un socket Docker.
+Abre `http://localhost:5173`. Configura `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `VITE_GOOGLE_CLIENT_ID` en `.env` para iniciar sesión con Google. El frontend guarda el JWT en `localStorage`. La ejecución de retos usa subprocess de Python o Node.js con timeout y límites de CPU/memoria; no necesita un socket Docker.
 
-El sandbox por subprocess es compatible con Render, pero ofrece un aislamiento menor que un contenedor: el proceso hereda el kernel y el usuario del servicio (en Linux intenta bajar a `nobody` cuando el proceso tiene privilegios), y los límites POSIX no existen en Windows. El bloqueo AST reduce imports y llamadas peligrosas, pero no debe considerarse una frontera de seguridad para código hostil de alto riesgo. Para ese nivel se necesitaría un servicio externo especializado o aislamiento de VM.
+El sandbox por subprocess es compatible con Render, pero ofrece un aislamiento menor que un contenedor: el proceso hereda el kernel y el usuario del servicio (en Linux intenta bajar a `nobody` cuando el proceso tiene privilegios), y los límites POSIX no existen en Windows. Python usa AST y límite AS de 128 MB; JavaScript usa `node --check`, heap V8 de 64 MB y bloqueo de APIs como `fs`, `child_process`, red, `eval`, `Function` y `process.env`. Node no usa `RLIMIT_AS` porque V8 necesita reservar memoria virtual para arrancar; el timeout, CPU y heap siguen limitados. Estas barreras no deben considerarse una frontera completa para código hostil de alto riesgo; para ese nivel se necesitaría un servicio externo especializado o aislamiento de VM.
+
+Los primeros cinco niveles ofrecen dos variantes del mismo reto: Python y JavaScript. Práctica guiada permite alternar el lenguaje y mantiene la navegación dentro del track elegido. El tutor socrático se puede pedir desde el editor y recibe el enunciado, el código actual y el caso fallido sin revelar una solución completa.
 
 ## Docker
 

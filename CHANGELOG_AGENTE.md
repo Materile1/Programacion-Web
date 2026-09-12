@@ -1,5 +1,18 @@
 # Registro del agente
 
+## Tareas I-J - JavaScript y tutor pedagógico - 2026-09-12
+
+- Confirmado al iniciar: `execute_code()` rechazaba todo lenguaje distinto de Python y el seed solo creaba retos Python. También se confirmó que `services/tutor.py` ya tenía fallback local y proveedores Gemini/OpenAI, pero ningún componente de Práctica lo consumía.
+- I: el API instala Node.js en su imagen y `code_runner.py` ejecuta JavaScript con un arnés JSON compatible, timeout de 5 segundos, límite de CPU y heap V8 de 64 MB. `node --check` valida sintaxis antes de ejecutar. No se aplica `RLIMIT_AS` a Node porque V8 necesita reservar memoria virtual para arrancar; Python sí mantiene 128 MB de AS.
+- I: JavaScript bloquea `require` de filesystem, procesos, red y workers, además de `eval`, `Function`, `process.env`, APIs de proceso y runtimes externos. Es análisis estático por patrones, no aislamiento fuerte; comparte kernel y usuario del servicio igual que el sandbox Python.
+- I: los primeros cinco niveles tienen variante Python y JavaScript del mismo reto. Práctica guiada incluye selector de lenguaje y anterior/siguiente recorre solo el track activo. No se añadió selección durante registro: el lenguaje es una elección por reto, reversible y visible.
+- J: Práctica guiada reemplaza la pista fija por tutor contextual. `Pedir ayuda` envía pregunta, enunciado y código; cada caso fallido ofrece `Explícame por qué falló` con input, esperado, obtenido y código. La UI distingue `TUTOR IA` de `TUTOR LOCAL` usando `mode`.
+- J: Review e Interview conservan la evaluación determinista de palabras clave y puntuación existente para no perder feedback reproducible; el tutor contextual se concentra en la práctica, donde puede observar código y casos concretos sin duplicar la evaluación.
+- J: los primeros cinco prompts incluyen `Concepto clave` y casos de uso real (formulario, perfil, transacción, cesta y etiquetas).
+- Configuración detectada: `.env` local contiene `GOOGLE_CLIENT_ID` y `VITE_GOOGLE_CLIENT_ID`; no contiene `OPENAI_API_KEY` ni `GEMINI_API_KEY`. El tutor local `local-socratic` es el modo esperado en esta validación.
+- Corrección pedagógica: el fallback local dejó de devolver una pista idéntica para todos los contextos; ahora menciona el reto y, ante un fallo, el input/esperado/obtenido y propone preguntas de diagnóstico sin entregar la solución.
+- Verificado: 9 pruebas focales de runner/tutor, suite backend completa lanzada sobre la imagen actual, Ruff en archivos I-J, build TypeScript/Vite y ESLint. La prueba manual sin código devolvió `local-socratic`; la prueba contextual quedó cubierta por test automatizado y usa el caso fallido específico.
+
 ## Tareas G-H - Sandbox Render y navegación - 2026-09-12
 
 - G: se eligió la opción A, un subprocess local de Python, porque funciona igual en Compose y Render sin asumir un socket Docker ni una API key externa. Cada caso usa `-I -S`, timeout de 5 segundos, límite POSIX de 128 MB de memoria y 5 segundos de CPU, stdin cerrado y, cuando el worker corre como root en Linux, intenta ejecutar como `nobody`.

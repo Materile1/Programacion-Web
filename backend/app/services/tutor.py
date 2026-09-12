@@ -7,6 +7,16 @@ LOCAL_ANSWER = ("¿Qué cambia en tu programa si la entrada está vacía? "
 				"Antes de modificar código, ¿puedes describir el resultado esperado para un caso normal y uno límite? "
 				"Pista: sigue el valor de cada variable después de la primera iteración.")
 
+def _local_answer(question: str, context: str) -> str:
+	if "Caso fallido:" in context:
+		failure = context.split("Caso fallido:", 1)[1].strip().replace("\n", " ")
+		return (f"En el caso que compartiste ({failure}), ¿qué parte de tu función transforma la entrada en el resultado? "
+				"Compara paso a paso el valor que devuelve cada operación con el esperado. "
+				"¿Qué cambio mínimo probarías para que la función procese todos los elementos, sin escribir todavía la solución completa?")
+	challenge = context.split("\n", 1)[0].strip() or "este reto"
+	return (f"Para {challenge.lower()}, empieza describiendo el contrato: ¿qué debe devolver la función para una entrada normal y para una entrada vacía? "
+			"Después sigue el valor de cada variable tras la primera operación y comprueba un caso límite antes de cambiar el código.")
+
 def _prompt(question: str, context: str) -> str:
 	return f"Pregunta del estudiante:\n{question}\n\nContexto del estudiante:\n{context or 'Sin contexto adicional.'}"
 
@@ -48,4 +58,4 @@ def ask_tutor(question: str, context: str) -> tuple[str, str]:
 			return _ask_openai(settings.openai_api_key, question, context), "ai-configured"
 	except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError):
 		pass
-	return LOCAL_ANSWER, "local-socratic"
+	return _local_answer(question, context), "local-socratic"

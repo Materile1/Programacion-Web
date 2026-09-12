@@ -1,8 +1,10 @@
 import ast
 import json
 import os
+import re
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 
 try:
@@ -22,6 +24,12 @@ EXECUTION_TIMEOUT_SECONDS = 5
 MEMORY_LIMIT_BYTES = 128 * 1024 * 1024
 BLOCKED_MODULES = {"os", "subprocess", "socket", "shutil", "ctypes"}
 BLOCKED_CALLS = {"eval", "exec", "__import__", "open"}
+BLOCKED_JS_PATTERNS = (
+    (re.compile(r"\brequire\s*\(\s*['\"](?:fs|child_process|net|dgram|tls|http|https|cluster|worker_threads)['\"]\s*\)"), "Importación Node bloqueada"),
+    (re.compile(r"\b(?:eval|Function)\s*\("), "Ejecución dinámica bloqueada"),
+    (re.compile(r"\bprocess\s*\.\s*(?:env|binding|dlopen|kill|exit)\b"), "Acceso al proceso bloqueado"),
+    (re.compile(r"\b(?:Bun|Deno)\s*\."), "Runtime externo bloqueado"),
+)
 
 def _result(stdout: str, stderr: str, passed: bool, feedback: str, results: list[dict] | None = None) -> dict:
     return {"stdout": stdout[-MAX_OUTPUT_BYTES:], "stderr": stderr[-MAX_OUTPUT_BYTES:], "passed": passed, "feedback": feedback, "results": results or []}
@@ -69,10 +77,11 @@ def _validate_code(code: str) -> str | None:
     return visitor.reason or None
 
 
-def _limit_child_process() -> None:
+def _limit_child_process(memory_limit: int | None = MEMORY_LIMIT_BYTES) -> None:
     if resource is not None:
         resource.setrlimit(resource.RLIMIT_CPU, (EXECUTION_TIMEOUT_SECONDS, EXECUTION_TIMEOUT_SECONDS))
-        resource.setrlimit(resource.RLIMIT_AS, (MEMORY_LIMIT_BYTES, MEMORY_LIMIT_BYTES))
+        if memory_limit is not None:
+            resource.setrlimit(resource.RLIMIT_AS, (memory_limit, memory_limit))
     if hasattr(os, "geteuid") and os.geteuid() == 0:
         try:
             import pwd
@@ -103,18 +112,72 @@ def _run_case(code: str, test_case: dict) -> tuple[str, str, int]:
         process.communicate()
         return "", "Tiempo de ejecución agotado (5 segundos).", 1
 
-def execute_code(code: str, language: str, test_cases_json: str):
-    if language != "python":
-        return _result("", "JavaScript requiere un runtime configurado en el worker.", False, "El ejecutor admite Python en este entorno.")
+
+def _build_javascript_harness(code: str, test_case: dict) -> str:
+    return (
+        code
+        + "\n"
+        + "const __input = JSON.parse(process.argv[1]);\n"
+        + "Promise.resolve(solve(__input)).then((__result) => { process.stdout.write(JSON.stringify(__result === undefined ? null : __result)); })"
+        + ".catch((__error) => { process.stderr.write(String(__error)); process.exitCode = 1; });\n"
+    )
+
+
+def _validate_javascript(code: str) -> str | None:
+    for pattern, reason in BLOCKED_JS_PATTERNS:
+        if pattern.search(code):
+            return reason
+    with tempfile.NamedTemporaryFile("w", suffix=".js", encoding="utf-8", delete=False) as source:
+        source.write(code)
+        source_path = source.name
     try:
-        ast.parse(code)
+        checked = subprocess.run(
+            ["node", "--check", source_path],
+            capture_output=True,
+            text=True,
+            timeout=EXECUTION_TIMEOUT_SECONDS,
+            env={"PATH": os.environ.get("PATH", "")},
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return str(exc)
+    finally:
+        try:
+            os.unlink(source_path)
+        except OSError:
+            pass
+    return checked.stderr.strip() if checked.returncode else None
+
+
+def _run_javascript_case(code: str, test_case: dict) -> tuple[str, str, int]:
+    process = subprocess.Popen(
+        ["node", "--no-addons", "--max-old-space-size=64", "-e", _build_javascript_harness(code, test_case), json.dumps(test_case.get("input"), ensure_ascii=False)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        stdin=subprocess.DEVNULL,
+        env={"PATH": os.environ.get("PATH", ""), "NODE_NO_WARNINGS": "1"},
+        preexec_fn=(lambda: _limit_child_process(None)) if os.name != "nt" else None,
+    )
+    try:
+        stdout, stderr = process.communicate(timeout=EXECUTION_TIMEOUT_SECONDS)
+        if process.returncode < 0 and not stderr:
+            return "", "Tiempo de ejecución agotado (5 segundos).", 1
+        return stdout.decode("utf-8", errors="replace"), stderr.decode("utf-8", errors="replace"), process.returncode
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.communicate()
+        return "", "Tiempo de ejecución agotado (5 segundos).", 1
+
+def execute_code(code: str, language: str, test_cases_json: str):
+    if language not in {"python", "javascript"}:
+        return _result("", "Lenguaje no soportado.", False, "El ejecutor admite Python y JavaScript en este entorno.")
+    try:
         test_cases = json.loads(test_cases_json or "[]")
     except (SyntaxError, json.JSONDecodeError, TypeError) as exc:
         return _result("", str(exc), False, "El código o los casos de prueba no son válidos.")
     if not isinstance(test_cases, list) or any(not isinstance(case, dict) for case in test_cases):
         return _result("", "Formato de casos de prueba inválido.", False, "Los casos de prueba no tienen un formato válido.")
     try:
-        blocked_reason = _validate_code(code)
+        blocked_reason = _validate_code(code) if language == "python" else _validate_javascript(code)
     except SyntaxError as exc:
         return _result("", str(exc), False, "El código o los casos de prueba no son válidos.")
     if blocked_reason:
@@ -124,7 +187,8 @@ def execute_code(code: str, language: str, test_cases_json: str):
     results = []
     for test_case in test_cases:
         try:
-            stdout, stderr, exit_code = _run_case(code, test_case)
+            runner = _run_case if language == "python" else _run_javascript_case
+            stdout, stderr, exit_code = runner(code, test_case)
         except (OSError, subprocess.SubprocessError) as exc:
             stdout, stderr, exit_code = "", str(exc), 1
         actual_text = stdout.strip()
