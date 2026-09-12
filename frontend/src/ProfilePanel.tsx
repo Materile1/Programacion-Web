@@ -1,0 +1,17 @@
+import { useEffect, useState } from 'react'
+import { CalendarDays, Check, Flame, Gauge, History } from 'lucide-react'
+import { api } from './api'
+import { useAuth } from './AuthContext'
+
+type Progress = { level: number; streak: number; completed_challenges: number; total_submissions: number; skill_breakdown: Record<string, number>; recent_submissions: { title: string; created_at: string; passed: boolean; score: number }[] }
+
+export function ProfilePanel() {
+  const { user } = useAuth()
+  const [progress, setProgress] = useState<Progress | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => { api<Progress>('/users/me/progress').then(setProgress).catch(cause => setError(cause instanceof Error ? cause.message : 'No se pudo cargar el perfil')) }, [])
+  if (!user) return null
+  return <div className="space-y-7"><div><div className="eyebrow text-mint">PERFIL DE USUARIO</div><h1 className="page-title">Tu progreso, a la vista.</h1></div><section className="panel flex flex-col gap-5 sm:flex-row sm:items-center"><div className="avatar h-16 w-16 text-lg">{user.name.slice(0, 2).toUpperCase()}</div><div><h2 className="font-display text-2xl font-semibold">{user.name}</h2><p className="mt-1 text-slate-400">{user.email}</p><p className="mt-3 flex items-center gap-2 text-xs text-slate-500"><CalendarDays size={14} /> Miembro desde {new Date(user.created_at).toLocaleDateString()}</p></div></section>{error && <p className="text-sm text-coral">{error}</p>}{progress && <><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><ProfileStat icon={<Gauge />} label="Nivel" value={String(progress.level)} /><ProfileStat icon={<Flame />} label="Racha" value={`${progress.streak} días`} /><ProfileStat icon={<Check />} label="Retos completados" value={String(progress.completed_challenges)} /><ProfileStat icon={<History />} label="Envíos totales" value={String(progress.total_submissions)} /></div><div className="grid gap-6 xl:grid-cols-2"><section className="panel"><div className="eyebrow text-aqua">DOMINIO POR SKILL</div><div className="mt-5 space-y-4">{Object.entries(progress.skill_breakdown).map(([skill, score]) => <div key={skill}><div className="flex justify-between text-sm"><span>{skill}</span><span className="text-mint">{score}%</span></div><div className="mt-2 h-2 rounded-full bg-[#162832]"><div className="h-2 rounded-full bg-mint" style={{ width: `${Math.min(score, 100)}%` }} /></div></div>)}</div></section><section className="panel"><div className="eyebrow text-aqua">HISTORIAL RECIENTE</div><div className="mt-5 space-y-3">{progress.recent_submissions.map((submission, index) => <div key={`${submission.title}-${index}`} className="flex items-center justify-between border-b border-line pb-3 text-sm"><div><p className="text-slate-200">{submission.title}</p><p className="mt-1 text-xs text-slate-500">{new Date(submission.created_at).toLocaleDateString()}</p></div><span className={submission.passed ? 'text-mint' : 'text-coral'}>{submission.passed ? 'Aprobado' : 'Reforzar'}</span></div>)}{progress.recent_submissions.length === 0 && <p className="text-sm text-slate-500">Aún no hay envíos registrados.</p>}</div></section></div></>}</div>
+}
+
+function ProfileStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) { return <div className="stat-card"><div className="stat-icon mint">{icon}</div><div className="eyebrow mt-5">{label}</div><div className="mt-1 font-display text-2xl font-bold">{value}</div></div> }

@@ -1,0 +1,52 @@
+# Registro del agente
+
+## Tarea 1 - Despliegue
+
+- Hecho: se consolidó el despliegue monolítico; FastAPI sirve `frontend/dist`, las rutas `/api` quedan separadas, el build embebe `VITE_API_URL=/api`, Compose pasa las variables Vite y el seed es idempotente.
+- Verificado: build de la imagen raíz, arranque de PostgreSQL/API, `/health`, `/`, recarga de `/dashboard`, 404 de API desconocida y seed repetido sin duplicados.
+- Pendiente externo: `RENDER_API_KEY` autentica, pero la cuenta no tiene servicios Render (`/v1/services` devolvió una lista vacía). No se pudo configurar variables ni desplegar hasta que exista un servicio conectado al repositorio.
+
+## Tarea 2 - Google OAuth
+
+- Hecho: se confirmó la cadena `.env` -> Compose -> build Vite -> `GoogleOAuthProvider`; Compose usa el client ID real y la API local queda en `/api` para el build del frontend.
+- Verificado: el build monolítico compila con el client ID inyectado.
+- Pendiente externo: el origen local es `http://localhost:5173`. El origen de producción y la validación OAuth en Render esperan a que exista un servicio Render; no se pudo modificar Google Cloud Console.
+
+## Tarea 3 - Resultados por caso
+
+- Hecho: `ExecuteOut` incluye resultados individuales; el ejecutor aísla cada caso; la UI muestra checks/X y detalles de entrada, esperado y obtenido cuando falla.
+- Verificado: Ruff, 3 tests backend, build frontend y lint en contenedores.
+- Pendiente: prueba manual visual con una sesión autenticada.
+
+## Tarea 4 - Code Review
+
+- Hecho: modelo `ReviewSnippet`, migración `0003_review_content`, cinco snippets seed idempotentes, endpoints protegidos de listado/detalle/envío y `ReviewPanel` con Monaco read-only y feedback detectado/omitido.
+- Verificado: endpoint de evaluación mediante pytest, Ruff y build/lint frontend.
+
+## Tarea 5 - Entrevista técnica
+
+- Hecho: modelos de preguntas/sesiones/respuestas, migración `0004_interview`, ocho preguntas seed, evaluación conceptual y de código, resumen persistido, cronómetro y `InterviewPanel`.
+- Verificado: migraciones hasta `0005_admin`, seed con 8 preguntas, pytest y build frontend.
+- Pendiente: recorrido manual completo con una sesión autenticada.
+
+## Tarea 6 - Curaduría IA
+
+- Hecho: `content_curator.py`, validación Pydantic, descarte con logging, `source="ai-curated"`, `is_admin`, migración `0005_admin` y `POST /api/admin/content/refresh`.
+- Decisión: se usan los RSS existentes de Hacker News y Python Blog como búsqueda/contexto; se reutilizan `OPENAI_API_KEY` y `GEMINI_API_KEY`, sin nueva clave de búsqueda.
+- Verificado: caso de JSON malformado descartado sin insertar ni romper el proceso.
+- Pendiente: requiere una clave de IA válida y un usuario con `is_admin=true` para prueba real contra proveedor.
+
+## Tarea 7 - Perfil
+
+- Hecho: progreso por skill, últimos 10 envíos con fecha/título/resultado, fecha de registro, `ProfilePanel`, navegación y tipo `profile`.
+- Verificado: compilación TypeScript de la imagen de producción y diagnósticos del código modificado.
+- Pendiente: confirmación manual con una cuenta autenticada.
+
+## Cierre
+
+- Migraciones nuevas: `0003_review_content`, `0004_interview`, `0005_admin`.
+- Variables locales/Render: `DATABASE_URL`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `VITE_GOOGLE_CLIENT_ID`, `VITE_API_URL`, `CORS_ORIGINS`; la curaduría reutiliza opcionalmente `OPENAI_API_KEY` o `GEMINI_API_KEY`.
+- Google Cloud pendiente: agregar `http://localhost:5173` como origen autorizado y, cuando exista el servicio Render, agregar su origen HTTPS exacto. La consola no puede ser modificada desde este entorno.
+- Render pendiente: la API key autentica, pero la cuenta consultada no tiene servicios (`/v1/services` devolvió cero); no se configuraron variables ni se disparó deploy.
+- Validación local: imagen raíz construida, Compose levantado, `/health`, `/`, rutas SPA, migraciones, seed idempotente, Ruff y 6 tests backend verificados; lint frontend con salida 0. No se hizo `git add`, `git commit` ni `git push`.
+

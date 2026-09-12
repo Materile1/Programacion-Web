@@ -3,7 +3,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 from ..database import get_db
 from ..deps import current_user
-from ..models import LearningPath, Level, Submission, User
+from ..models import Challenge, LearningPath, Level, Submission, User
 from ..schemas import LevelOut, NewsOut, ProgressOut, UserOut
 from ..services.news_feeder import fetch_news
 
@@ -27,4 +27,11 @@ def news(user: User = Depends(current_user)):
 def progress(db: Session = Depends(get_db), user: User = Depends(current_user)):
     completed = db.scalar(select(func.count(Submission.id)).where(Submission.user_id == user.id, Submission.passed.is_(True))) or 0
     total = db.scalar(select(func.count(Submission.id)).where(Submission.user_id == user.id)) or 0
-    return ProgressOut(level=user.level, streak=user.streak, completed_challenges=completed, total_submissions=total)
+    rows = db.execute(select(Submission, Challenge, Level).join(Challenge, Submission.challenge_id == Challenge.id).join(Level, Challenge.level_id == Level.id).where(Submission.user_id == user.id).order_by(Submission.created_at.desc()).limit(10)).all()
+    skill_scores: dict[str, list[float]] = {}
+    recent = []
+    for submission, challenge, level in rows:
+        skill_scores.setdefault(level.skill, []).append(submission.score)
+        recent.append({"title": challenge.title, "created_at": submission.created_at, "passed": submission.passed, "score": submission.score})
+    breakdown = {skill: round(sum(scores) / len(scores), 1) for skill, scores in skill_scores.items()}
+    return ProgressOut(level=user.level, streak=user.streak, completed_challenges=completed, total_submissions=total, skill_breakdown=breakdown, recent_submissions=recent)

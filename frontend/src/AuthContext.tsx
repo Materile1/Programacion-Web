@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google'
 import { api } from './api'
 
-export type User = { id: number; email: string; name: string; avatar?: string | null; level: number; streak: number }
+export type User = { id: number; email: string; name: string; avatar?: string | null; level: number; streak: number; created_at: string }
 type AuthContextValue = { user: User | null; token: string | null; loading: boolean; signInWithGoogle: (response: CredentialResponse) => Promise<void>; signInWithPassword: (email: string, password: string) => Promise<void>; registerWithPassword: (name: string, email: string, password: string) => Promise<void>; signOut: () => void }
 const AuthContext = createContext<AuthContextValue | null>(null)
 

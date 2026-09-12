@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Activity, ArrowRight, BookOpen, Check, ChevronRight, Code2, Compass, Flame, Gauge, Menu, MessageCircle, Play, Settings2, Sparkles, Timer, Trophy, X } from 'lucide-react'
-import { api, executeCode, submitCode, type Challenge, type Level, type News } from './api'
+import { api, executeCode, submitCode, type Challenge, type Level, type News, type TestCaseResult } from './api'
 import { GoogleSignIn, useAuth } from './AuthContext'
 import { PracticePanel } from './PracticePanel'
+import { ReviewPanel } from './ReviewPanel'
+import { InterviewPanel } from './InterviewPanel'
+import { ProfilePanel } from './ProfilePanel'
 import type { View } from './types'
 
 function App() {
@@ -15,6 +18,7 @@ function App() {
   const [result, setResult] = useState('')
   const [stdout, setStdout] = useState('')
   const [stderr, setStderr] = useState('')
+  const [caseResults, setCaseResults] = useState<TestCaseResult[]>([])
   const [running, setRunning] = useState(false)
   const [notice, setNotice] = useState('Conectando con DevCoach...')
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -23,15 +27,15 @@ function App() {
     if (!token) return
     Promise.all([api<Level[]>('/dashboard/path'), api<News[]>('/dashboard/news')]).then(([path, updates]) => { setLevels(path); setChallenge(path.find(level => level.status === 'active')?.challenges[0] ?? path[0]?.challenges[0] ?? null); setNews(updates); setNotice('Sincronizado con tu workspace') }).catch(() => setNotice('No se pudo sincronizar con la API'))
   }, [token])
-  useEffect(() => { if (challenge) { setCode(challenge.starter_code); setStdout(''); setStderr('') } }, [challenge])
+  useEffect(() => { if (challenge) { setCode(challenge.starter_code); setStdout(''); setStderr(''); setCaseResults([]) } }, [challenge])
   const active = levels.find(level => level.status === 'active') ?? levels[0]
   const completed = levels.filter(level => level.status === 'completed').length
 
   const navigate = (next: View) => { setView(next); setMobileOpen(false); setResult('') }
   const run = async () => {
     if (!challenge) return
-    setRunning(true); setResult(''); setStdout(''); setStderr('')
-    try { const response = await executeCode(challenge.id, code, challenge.language); setStdout(response.stdout); setStderr(response.stderr); setResult(response.feedback); if (response.passed) { await submitCode(challenge.id, code, challenge.language); setNotice('Progreso guardado en tu workspace') } }
+    setRunning(true); setResult(''); setStdout(''); setStderr(''); setCaseResults([])
+    try { const response = await executeCode(challenge.id, code, challenge.language); setStdout(response.stdout); setStderr(response.stderr); setResult(response.feedback); setCaseResults(response.results); if (response.passed) { await submitCode(challenge.id, code, challenge.language); setNotice('Progreso guardado en tu workspace') } }
     catch (error) { setStderr(error instanceof Error ? error.message : 'No se pudo ejecutar el código') }
     finally { setRunning(false) }
   }
@@ -42,11 +46,11 @@ function App() {
     <aside className={`${mobileOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-30 w-72 border-r border-line bg-[#09151e]/95 p-6 transition-transform lg:translate-x-0`}>
       <div className="flex items-center justify-between"><div className="flex items-center gap-3"><div className="brand-mark"><Code2 size={20} /></div><div><div className="font-display text-lg font-bold tracking-tight">DevCoach</div><div className="eyebrow">TRAINING OS</div></div></div><button className="icon-button lg:hidden" onClick={() => setMobileOpen(false)} aria-label="Cerrar menú"><X size={18} /></button></div>
       <div className="mt-10 rounded-2xl border border-line bg-panel p-4"><div className="flex items-center gap-3"><div className="avatar">{user.name.slice(0, 2).toUpperCase()}</div><div><div className="font-semibold">{user.name}</div><div className="text-xs text-slate-400">Nivel {user.level} · Builder</div></div><button className="ml-auto text-slate-500" onClick={signOut} aria-label="Cerrar sesión"><Settings2 size={16} /></button></div><div className="mt-5 flex items-center justify-between text-xs"><span className="text-slate-400">Racha actual</span><span className="font-semibold text-amber"><Flame size={14} className="mr-1 inline" />{user.streak} días</span></div></div>
-      <nav className="mt-8 space-y-2">{([['overview','Resumen',Gauge],['path','Ruta de aprendizaje',Compass],['practice','Práctica guiada',Code2],['review','Code review',MessageCircle],['interview','Entrevista técnica',Trophy]] as const).map(([id,label,Icon]) => <button key={id} onClick={() => navigate(id)} className={`nav-item ${view === id ? 'nav-active' : ''}`}><Icon size={18} /><span>{label}</span>{id === 'practice' && <span className="ml-auto h-2 w-2 rounded-full bg-mint" />}</button>)}</nav>
+      <nav className="mt-8 space-y-2">{([['overview','Resumen',Gauge],['path','Ruta de aprendizaje',Compass],['practice','Práctica guiada',Code2],['review','Code review',MessageCircle],['interview','Entrevista técnica',Trophy],['profile','Perfil',Activity]] as const).map(([id,label,Icon]) => <button key={id} onClick={() => navigate(id)} className={`nav-item ${view === id ? 'nav-active' : ''}`}><Icon size={18} /><span>{label}</span>{id === 'practice' && <span className="ml-auto h-2 w-2 rounded-full bg-mint" />}</button>)}</nav>
       <div className="absolute bottom-6 left-6 right-6 rounded-2xl border border-[#315144] bg-[#10241e] p-4"><div className="flex items-center gap-2 text-mint"><Sparkles size={16} /><span className="text-xs font-bold uppercase tracking-widest">Coach tip</span></div><p className="mt-2 text-sm leading-5 text-slate-300">La consistencia gana a la intensidad. Vuelve mañana.</p></div>
     </aside>
     <main className="lg:pl-72"><header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-line bg-ink/80 px-5 backdrop-blur-xl lg:px-10"><button className="icon-button lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Abrir menú"><Menu size={20} /></button><div className="hidden text-sm text-slate-400 md:block">Workspace / <span className="text-slate-200">{view === 'overview' ? 'Resumen' : view}</span></div><div className="ml-auto flex items-center gap-4"><div className="hidden items-center gap-2 text-xs text-slate-500 sm:flex"><span className="pulse-dot" /> {notice}</div><button className="icon-button" aria-label="Actividad"><Activity size={18} /></button><div className="avatar small">{user.name.slice(0, 2).toUpperCase()}</div></div></header>
-      <div className="mx-auto max-w-[1500px] px-5 py-8 lg:px-10 lg:py-10">{view === 'overview' && <Overview active={active} completed={completed} news={news} onPractice={() => navigate('practice')} />}{view === 'path' && <Path levels={levels} onSelect={(item) => { setChallenge(item.challenges[0]); navigate('practice') }} />}{(view === 'practice' || view === 'review' || view === 'interview') && <PracticePanel view={view} challenge={challenge} code={code} setCode={setCode} run={run} running={running} stdout={stdout} stderr={stderr} result={result} />}</div>
+      <div className="mx-auto max-w-[1500px] px-5 py-8 lg:px-10 lg:py-10">{view === 'overview' && <Overview active={active} completed={completed} news={news} onPractice={() => navigate('practice')} />}{view === 'path' && <Path levels={levels} onSelect={(item) => { setChallenge(item.challenges[0]); navigate('practice') }} />}{view === 'review' && <ReviewPanel />}{view === 'interview' && <InterviewPanel />}{view === 'profile' && <ProfilePanel />}{view === 'practice' && <PracticePanel view={view} challenge={challenge} code={code} setCode={setCode} run={run} running={running} stdout={stdout} stderr={stderr} result={result} caseResults={caseResults} />}</div>
     </main>
   </div>
 }

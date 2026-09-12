@@ -15,6 +15,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     level: Mapped[int] = mapped_column(Integer, default=7)
     streak: Mapped[int] = mapped_column(Integer, default=12)
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     submissions: Mapped[list["Submission"]] = relationship(back_populates="user")
 
@@ -47,6 +48,7 @@ class Challenge(Base):
     difficulty: Mapped[str] = mapped_column(String(30), default="Intermedio")
     starter_code: Mapped[str] = mapped_column(Text)
     test_cases: Mapped[str] = mapped_column(Text, default="[]")
+    source: Mapped[str] = mapped_column(String(30), default="seed")
     level: Mapped[Level] = relationship(back_populates="challenges")
 
 class Submission(Base):
@@ -60,3 +62,44 @@ class Submission(Base):
     feedback: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     user: Mapped[User] = relationship(back_populates="submissions")
+    challenge: Mapped[Challenge] = relationship()
+
+class ReviewSnippet(Base):
+    __tablename__ = "review_snippets"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(180))
+    language: Mapped[str] = mapped_column(String(30), default="python")
+    code: Mapped[str] = mapped_column(Text)
+    known_issues: Mapped[str] = mapped_column(Text, default="[]")
+    difficulty: Mapped[str] = mapped_column(String(30), default="Intermedio")
+    source: Mapped[str] = mapped_column(String(30), default="seed")
+
+class InterviewQuestion(Base):
+    __tablename__ = "interview_questions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(String(20))
+    prompt: Mapped[str] = mapped_column(Text)
+    expected_points: Mapped[str] = mapped_column(Text, default="[]")
+    test_cases: Mapped[str] = mapped_column(Text, default="[]")
+    time_limit_seconds: Mapped[int] = mapped_column(Integer, default=120)
+    source: Mapped[str] = mapped_column(String(30), default="seed")
+
+class InterviewSession(Base):
+    __tablename__ = "interview_sessions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    user: Mapped[User] = relationship()
+    answers: Mapped[list["InterviewAnswer"]] = relationship(back_populates="session", cascade="all, delete-orphan")
+
+class InterviewAnswer(Base):
+    __tablename__ = "interview_answers"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("interview_sessions.id"))
+    question_id: Mapped[int] = mapped_column(ForeignKey("interview_questions.id"))
+    answer: Mapped[str] = mapped_column(Text)
+    score: Mapped[float] = mapped_column(Float, default=0)
+    feedback: Mapped[str] = mapped_column(Text, default="")
+    answered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    session: Mapped[InterviewSession] = relationship(back_populates="answers")
+    question: Mapped[InterviewQuestion] = relationship()

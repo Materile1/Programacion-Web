@@ -1,1 +1,1 @@
-export type View = 'overview' | 'path' | 'practice' | 'review' | 'interview'
+export type View = 'overview' | 'path' | 'practice' | 'review' | 'interview' | 'profile'
