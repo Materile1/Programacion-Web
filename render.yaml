@@ -11,9 +11,9 @@ services:
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
-  - type: pserv
-    name: devcoach-db
-    runtime: postgres
-    plan: free
+
+databases:
+  - name: devcoach-db
     databaseName: devcoach
     user: devcoach
+    plan: free
