@@ -65,3 +65,24 @@ def test_execute_javascript_rejects_dangerous_api():
 
     assert result["passed"] is False
     assert "bloqueada" in result["stderr"]
+
+
+def test_execute_sql_compares_query_results():
+    setup = "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER); INSERT INTO users (name, age) VALUES ('Ana', 30), ('Luis', 25);"
+    cases = json.dumps([{"input": None, "output": [["Ana", 30], ["Luis", 25]]}])
+
+    passed = code_runner.execute_code("SELECT name, age FROM users ORDER BY id", "sql", cases, "sql", setup)
+    failed = code_runner.execute_code("SELECT name FROM users ORDER BY id", "sql", cases, "sql", setup)
+
+    assert passed["passed"] is True
+    assert passed["results"][0]["actual"] == [["Ana", 30], ["Luis", 25]]
+    assert failed["passed"] is False
+    assert failed["results"][0]["expected"] != failed["results"][0]["actual"]
+
+
+def test_execute_sql_rejects_mutating_query():
+    setup = "CREATE TABLE users (name TEXT); INSERT INTO users VALUES ('Ana');"
+    result = code_runner.execute_code("DELETE FROM users", "sql", json.dumps([{"input": None, "output": []}]), "sql", setup)
+
+    assert result["passed"] is False
+    assert "SELECT" in result["stderr"]

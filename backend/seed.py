@@ -65,6 +65,13 @@ JAVASCRIPT_CHALLENGE_CONTENT = [
     ("Recibe una lista y devuelve otra sin repetidos, conservando la primera aparición.", "function solve(data) {\n  return [...new Set(data)];\n}\n", [{"input": [1, 2, 1, 3], "output": [1, 2, 3]}, {"input": [], "output": []}]),
 ]
 
+SQL_CHALLENGE_CONTENT = (
+    "Concepto clave: SELECT, ORDER BY y lectura de resultados tabulares.\n\nCaso real: genera el listado de usuarios que un panel administrativo debe mostrar, ordenado por registro.",
+    "SELECT name, age FROM users ORDER BY id",
+    [{"input": None, "output": [["Ana", 30], ["Luis", 25], ["Marta", 35]]}],
+    "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL, age INTEGER NOT NULL); INSERT INTO users (name, age) VALUES ('Ana', 30), ('Luis', 25), ('Marta', 35);",
+)
+
 def seed():
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
@@ -83,19 +90,27 @@ def seed():
             variants = [("python", CHALLENGE_CONTENT[index])]
             if index < len(JAVASCRIPT_CHALLENGE_CONTENT):
                 variants.append(("javascript", JAVASCRIPT_CHALLENGE_CONTENT[index]))
-            for language, (prompt, starter_code, test_cases) in variants:
+            if index == 9:
+                variants = [("sql", SQL_CHALLENGE_CONTENT)]
+            for language, content in variants:
+                prompt, starter_code, test_cases = content[:3]
+                setup_sql = content[3] if language == "sql" else None
                 if language == "python" and index < len(CONCEPT_PREFIXES):
                     prompt = CONCEPT_PREFIXES[index] + prompt
                 variant_title = challenge_title if language == "python" else f"{challenge_title} [JavaScript]"
+                if language == "sql":
+                    variant_title = challenge_title
                 challenge = db.scalar(select(Challenge).where(Challenge.level_id == level.id, Challenge.title == variant_title))
                 if not challenge:
-                    challenge = Challenge(level_id=level.id, title=variant_title, language=language, prompt=prompt, starter_code=starter_code, test_cases=json.dumps(test_cases))
+                    challenge = Challenge(level_id=level.id, title=variant_title, language=language, evaluator_type=language, prompt=prompt, starter_code=starter_code, test_cases=json.dumps(test_cases), setup_sql=setup_sql)
                     db.add(challenge)
                 elif challenge.source == "seed":
                     challenge.language = language
+                    challenge.evaluator_type = language
                     challenge.prompt = prompt
                     challenge.starter_code = starter_code
                     challenge.test_cases = json.dumps(test_cases)
+                    challenge.setup_sql = setup_sql
         if not db.scalar(select(User).where(User.email == "demo@devcoach.app")):
             db.add(User(email="demo@devcoach.app", name="Alex Rivera", password_hash=hash_password("devcoach123"), level=0, streak=0))
         for title, language, code, issues in REVIEW_SNIPPETS:

@@ -46,9 +46,11 @@ class Challenge(Base):
     title: Mapped[str] = mapped_column(String(180))
     prompt: Mapped[str] = mapped_column(Text)
     language: Mapped[str] = mapped_column(String(30), default="python")
+    evaluator_type: Mapped[str] = mapped_column(String(30), default="python")
     difficulty: Mapped[str] = mapped_column(String(30), default="Intermedio")
     starter_code: Mapped[str] = mapped_column(Text)
     test_cases: Mapped[str] = mapped_column(Text, default="[]")
+    setup_sql: Mapped[str | None] = mapped_column(Text, nullable=True)
     source: Mapped[str] = mapped_column(String(30), default="seed")
     level: Mapped[Level] = relationship(back_populates="challenges")
 

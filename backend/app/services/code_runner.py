@@ -2,6 +2,7 @@ import ast
 import json
 import os
 import re
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -167,9 +168,30 @@ def _run_javascript_case(code: str, test_case: dict) -> tuple[str, str, int]:
         process.communicate()
         return "", "Tiempo de ejecución agotado (5 segundos).", 1
 
-def execute_code(code: str, language: str, test_cases_json: str):
-    if language not in {"python", "javascript"}:
-        return _result("", "Lenguaje no soportado.", False, "El ejecutor admite Python y JavaScript en este entorno.")
+
+def _deny_sql_writes(action, *_args):
+    denied = {sqlite3.SQLITE_ATTACH, sqlite3.SQLITE_ALTER_TABLE, sqlite3.SQLITE_CREATE_INDEX, sqlite3.SQLITE_CREATE_TABLE, sqlite3.SQLITE_CREATE_TRIGGER, sqlite3.SQLITE_CREATE_VIEW, sqlite3.SQLITE_DELETE, sqlite3.SQLITE_DETACH, sqlite3.SQLITE_DROP_INDEX, sqlite3.SQLITE_DROP_TABLE, sqlite3.SQLITE_DROP_TRIGGER, sqlite3.SQLITE_DROP_VIEW, sqlite3.SQLITE_INSERT, sqlite3.SQLITE_PRAGMA, sqlite3.SQLITE_UPDATE}
+    return sqlite3.SQLITE_DENY if action in denied else sqlite3.SQLITE_OK
+
+
+def _run_sql_case(query: str, setup_sql: str, test_case: dict) -> tuple[str, str, int]:
+    if not re.match(r"^\s*(select|with)\b", query, re.IGNORECASE) or ";" in query.rstrip().rstrip(";"):
+        return "", "Solo se permiten consultas SELECT o WITH de una sentencia.", 1
+    connection = sqlite3.connect(":memory:")
+    try:
+        connection.executescript(setup_sql or "")
+        connection.set_authorizer(_deny_sql_writes)
+        rows = [list(row) for row in connection.execute(query).fetchall()]
+        return json.dumps(rows, ensure_ascii=False), "", 0
+    except sqlite3.Error as exc:
+        return "", str(exc), 1
+    finally:
+        connection.close()
+
+def execute_code(code: str, language: str, test_cases_json: str, evaluator_type: str | None = None, setup_sql: str | None = None):
+    evaluator = evaluator_type or language
+    if evaluator not in {"python", "javascript", "sql"}:
+        return _result("", "Lenguaje no soportado.", False, "El ejecutor admite Python, JavaScript y SQL en este entorno.")
     try:
         test_cases = json.loads(test_cases_json or "[]")
     except (SyntaxError, json.JSONDecodeError, TypeError) as exc:
@@ -177,7 +199,7 @@ def execute_code(code: str, language: str, test_cases_json: str):
     if not isinstance(test_cases, list) or any(not isinstance(case, dict) for case in test_cases):
         return _result("", "Formato de casos de prueba inválido.", False, "Los casos de prueba no tienen un formato válido.")
     try:
-        blocked_reason = _validate_code(code) if language == "python" else _validate_javascript(code)
+        blocked_reason = _validate_code(code) if evaluator == "python" else _validate_javascript(code) if evaluator == "javascript" else None
     except SyntaxError as exc:
         return _result("", str(exc), False, "El código o los casos de prueba no son válidos.")
     if blocked_reason:
@@ -187,7 +209,7 @@ def execute_code(code: str, language: str, test_cases_json: str):
     results = []
     for test_case in test_cases:
         try:
-            runner = _run_case if language == "python" else _run_javascript_case
+            runner = _run_case if evaluator == "python" else _run_javascript_case if evaluator == "javascript" else lambda current_code, current_case: _run_sql_case(current_code, setup_sql or "", current_case)
             stdout, stderr, exit_code = runner(code, test_case)
         except (OSError, subprocess.SubprocessError) as exc:
             stdout, stderr, exit_code = "", str(exc), 1
@@ -206,7 +228,7 @@ def execute_code(code: str, language: str, test_cases_json: str):
     return _result("".join(stdout_parts), "".join(stderr_parts), passed, feedback, results)
 
 
-def run_submission(code: str, language: str, test_cases_json: str = "[]") -> ExecutionResult:
-    executed = execute_code(code, language, test_cases_json)
+def run_submission(code: str, language: str, test_cases_json: str = "[]", evaluator_type: str | None = None, setup_sql: str | None = None) -> ExecutionResult:
+    executed = execute_code(code, language, test_cases_json, evaluator_type, setup_sql)
     results = executed.get("results", [])
     return ExecutionResult(executed["passed"], sum(result["passed"] for result in results), len(results), executed["feedback"])

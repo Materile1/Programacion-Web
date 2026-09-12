@@ -33,7 +33,7 @@ def submit(payload: SubmissionRequest, db: Session = Depends(get_db), user: User
     challenge = db.get(Challenge, payload.challenge_id)
     if not challenge:
         raise HTTPException(404, "Reto no encontrado")
-    execution = run_submission(payload.code, payload.language, challenge.test_cases)
+    execution = run_submission(payload.code, payload.language, challenge.test_cases, challenge.evaluator_type, challenge.setup_sql)
     result = review_result(execution.passed, execution.passed_tests / execution.total_tests, len(payload.code))
     db.add(Submission(user_id=user.id, challenge_id=challenge.id, score=result.score, quality=result.quality, passed=execution.passed, feedback=execution.feedback))
     if execution.passed:
@@ -48,7 +48,7 @@ def execute(payload: ExecuteRequest, db: Session = Depends(get_db), user: User =
     challenge = db.get(Challenge, payload.challenge_id)
     if not challenge:
         raise HTTPException(404, "Reto no encontrado")
-    return execute_code(payload.code, payload.language, challenge.test_cases)
+    return execute_code(payload.code, payload.language, challenge.test_cases, challenge.evaluator_type, challenge.setup_sql)
 
 @router.post("/tutor", response_model=TutorOut)
 def tutor(payload: TutorRequest, user: User = Depends(current_user)):

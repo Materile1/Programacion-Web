@@ -2,7 +2,7 @@ import httpx
 
 from ..config import get_settings
 
-SOCRATIC_SYSTEM = "Guia con preguntas progresivas. No entregues la solucion directa. Pide que el estudiante observe entradas, invariantes y casos limite."
+SOCRATIC_SYSTEM = "Guía con preguntas progresivas. No entregues la solución directa. Pide que el estudiante observe entradas, invariantes y casos límite. Estructura siempre la respuesta en dos secciones con estos encabezados exactos: 'En palabras simples:' y 'En términos técnicos:'. En la primera usa lenguaje cercano; en la segunda nombra con precisión el concepto de programación. Ambas secciones deben orientar sin incluir una implementación completa."
 LOCAL_ANSWER = ("¿Qué cambia en tu programa si la entrada está vacía? "
 				"Antes de modificar código, ¿puedes describir el resultado esperado para un caso normal y uno límite? "
 				"Pista: sigue el valor de cada variable después de la primera iteración.")
@@ -10,12 +10,12 @@ LOCAL_ANSWER = ("¿Qué cambia en tu programa si la entrada está vacía? "
 def _local_answer(question: str, context: str) -> str:
 	if "Caso fallido:" in context:
 		failure = context.split("Caso fallido:", 1)[1].strip().replace("\n", " ")
-		return (f"En el caso que compartiste ({failure}), ¿qué parte de tu función transforma la entrada en el resultado? "
-				"Compara paso a paso el valor que devuelve cada operación con el esperado. "
-				"¿Qué cambio mínimo probarías para que la función procese todos los elementos, sin escribir todavía la solución completa?")
+		return (f"En palabras simples:\nEn el caso que compartiste ({failure}), tu función devuelve algo distinto de lo que pide el caso. "
+				"¿Qué paso está dejando fuera parte de la entrada?\n\nEn términos técnicos:\nCompara el flujo de transformación con el contrato de salida y localiza la primera operación cuyo valor difiere del esperado. "
+				"¿Qué cambio mínimo probarías sin escribir todavía la solución completa?")
 	challenge = context.split("\n", 1)[0].strip() or "este reto"
-	return (f"Para {challenge.lower()}, empieza describiendo el contrato: ¿qué debe devolver la función para una entrada normal y para una entrada vacía? "
-			"Después sigue el valor de cada variable tras la primera operación y comprueba un caso límite antes de cambiar el código.")
+	return (f"En palabras simples:\nPara {challenge.lower()}, empieza describiendo qué debería pasar con un caso normal y con una entrada vacía. "
+			"Después sigue el valor de cada variable tras la primera operación.\n\nEn términos técnicos:\nDefine el contrato de entrada/salida, identifica el invariante que debe mantenerse y prueba un caso límite antes de cambiar el código.")
 
 def _prompt(question: str, context: str) -> str:
 	return f"Pregunta del estudiante:\n{question}\n\nContexto del estudiante:\n{context or 'Sin contexto adicional.'}"

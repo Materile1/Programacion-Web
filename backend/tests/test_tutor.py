@@ -15,6 +15,8 @@ def test_tutor_without_provider_key_returns_local_socratic(monkeypatch):
 
     assert mode == "local-socratic"
     assert "entrada" in answer.lower()
+    assert "En palabras simples:" in answer
+    assert "En términos técnicos:" in answer
     assert "def solve" not in answer
 
 

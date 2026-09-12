@@ -33,7 +33,9 @@ class ChallengeOut(BaseModel):
     language: str
     difficulty: str
     starter_code: str
+    evaluator_type: str = "python"
     test_cases: list[dict] = []
+    setup_sql: str | None = None
     completed: bool = False
 
     @field_validator("test_cases", mode="before")
@@ -110,7 +112,7 @@ class LevelOut(BaseModel):
 class SubmissionRequest(BaseModel):
     challenge_id: int
     code: str = Field(min_length=1, max_length=20000)
-    language: str = Field(default="python", pattern="^(python|javascript)$")
+    language: str = Field(default="python", pattern="^(python|javascript|sql)$")
 
 class SubmissionOut(BaseModel):
     passed: bool
@@ -133,7 +135,7 @@ class GoogleTokenRequest(BaseModel):
 class ExecuteRequest(BaseModel):
     challenge_id: int
     code: str = Field(min_length=1, max_length=20000)
-    language: str = Field(default="python", pattern="^(python|javascript)$")
+    language: str = Field(default="python", pattern="^(python|javascript|sql)$")
 
 class TestCaseResult(BaseModel):
     input: object

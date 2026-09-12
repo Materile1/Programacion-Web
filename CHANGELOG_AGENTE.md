@@ -1,5 +1,14 @@
 # Registro del agente
 
+## Tareas K-M - Contraste, tutor estructurado y evaluadores extensibles - 2026-09-12
+
+- K: todos los `input` y `textarea` existentes (login, registro, tutor, review e interview) usan `.input`, ahora aliasada con `.form-input` en el tema oscuro. Se añadieron color de texto, fondo, foco, placeholder y reglas `:-webkit-autofill` para evitar el fondo claro nativo de Chrome/Edge. El textarea del tutor usa explícitamente `.form-input`.
+- L: el prompt socrático exige `En palabras simples:` y `En términos técnicos:` sin cambiar la política de no entregar la solución completa. El fallback local también genera ambas secciones y el frontend las presenta en bloques visuales distintos; si una respuesta externa omite la segunda sección, se muestra la primera sin romper la UI.
+- M: `Challenge` ahora tiene `evaluator_type` y `setup_sql`; la migración `0008_challenge_evaluators` prepara ambos campos. `execute_code()` despacha Python, JavaScript o SQL y conserva stdout/stderr/passed/feedback/results.
+- M: el evaluador SQL crea SQLite en memoria por caso, ejecuta el `setup_sql` confiable del reto, permite solo una consulta `SELECT`/`WITH`, bloquea mutaciones mediante authorizer y compara filas reales contra `output`. El reto SQL del nivel 10 dejó de usar el arnés `solve(data)`.
+- M: Monaco recibe `language="sql"` y muestra extensión `.sql`. Los primeros cinco niveles siguen ofreciendo variantes Python/JavaScript; SQL se modela como un evaluador independiente listo para añadir nuevos tipos sin acoplarlos al arnés de funciones.
+- Verificado: 19 pruebas backend antes del último refuerzo del formato tutor, pruebas SQL correcta/incorrecta y mutación, Ruff focal, migración/seed, build y lint frontend. No se detectaron claves `OPENAI_API_KEY` ni `GEMINI_API_KEY` en `.env`; el modo local es el esperado.
+
 ## Tareas I-J - JavaScript y tutor pedagógico - 2026-09-12
 
 - Confirmado al iniciar: `execute_code()` rechazaba todo lenguaje distinto de Python y el seed solo creaba retos Python. También se confirmó que `services/tutor.py` ya tenía fallback local y proveedores Gemini/OpenAI, pero ningún componente de Práctica lo consumía.
@@ -12,6 +21,28 @@
 - Configuración detectada: `.env` local contiene `GOOGLE_CLIENT_ID` y `VITE_GOOGLE_CLIENT_ID`; no contiene `OPENAI_API_KEY` ni `GEMINI_API_KEY`. El tutor local `local-socratic` es el modo esperado en esta validación.
 - Corrección pedagógica: el fallback local dejó de devolver una pista idéntica para todos los contextos; ahora menciona el reto y, ante un fallo, el input/esperado/obtenido y propone preguntas de diagnóstico sin entregar la solución.
 - Verificado: 9 pruebas focales de runner/tutor, suite backend completa lanzada sobre la imagen actual, Ruff en archivos I-J, build TypeScript/Vite y ESLint. La prueba manual sin código devolvió `local-socratic`; la prueba contextual quedó cubierta por test automatizado y usa el caso fallido específico.
+
+### Auditoría M: tema real frente a `language` original
+
+| Nivel / reto | Tema real según título/prompt | `language` original | Corrección |
+| --- | --- | --- | --- |
+| 1 / Reto 1: Orientación | Identidad de valores y contrato de salida | python | Se mantiene Python; evaluator `python` |
+| 2 / Reto 2: Fundamentos | Validación de diccionarios y datos de perfil | python | Se mantiene Python; evaluator `python` |
+| 3 / Reto 3: Control de flujo | Condicionales y paridad | python | Se mantiene Python; evaluator `python` |
+| 4 / Reto 4: Funciones | Acumuladores y suma de una cesta | python | Se mantiene Python; evaluator `python` |
+| 5 / Reto 5: Estructuras | Deduplificación con conjuntos | python | Se mantiene Python; evaluator `python` |
+| 6 / Reto 6: Algoritmos | Segundo valor máximo distinto | python | Se mantiene Python; evaluator `python` |
+| 7 / Reto 7: POO | Frecuencia de caracteres | python | Se mantiene Python; evaluator `python` |
+| 8 / Reto 8: Testing | Palíndromos y casos límite | python | Se mantiene Python; evaluator `python` |
+| 9 / Reto 9: Git | Búsqueda binaria | python | Se mantiene Python como reto algorítmico de apoyo; evaluator `python` |
+| 10 / Reto 10: SQL | Consulta tabular de usuarios | python | Corregido a `language=sql`, `evaluator_type=sql`, SQLite en memoria y `setup_sql` |
+| 11 / Reto 11: APIs | Ordenación/merge de intervalos | python | Se mantiene Python como reto algorítmico de apoyo; evaluator `python` |
+| 12 / Reto 12: Backend | Two Sum sobre un contrato de datos | python | Se mantiene Python como reto de servicio; evaluator `python` |
+| 13 / Reto 13: Frontend | Conteo de tareas completadas | python | Se mantiene Python como reto de transformación; evaluator `python` |
+| 14 / Reto 14: Arquitectura | Transpuesta de matriz | python | Se mantiene Python como reto de transformación; evaluator `python` |
+| 15 / Reto 15: Proyecto final | Balanceo de delimitadores | python | Se mantiene Python; evaluator `python` |
+
+La auditoría encontró un desajuste de evaluación crítico en SQL; los nombres de niveles 6-15 son contextos de progresión, no indican por sí solos que el reto deba ejecutarse en otro runtime. El nuevo `evaluator_type` permite corregir esos casos cuando el contenido real evolucione sin acoplar todos los retos a `solve(data)`.
 
 ## Tareas G-H - Sandbox Render y navegación - 2026-09-12
 
