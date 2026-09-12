@@ -1,6 +1,6 @@
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api'
 export type Level = { id: number; number: number; title: string; skill: string; status: string; challenges: Challenge[] }
-export type Challenge = { id: number; title: string; prompt: string; language: string; difficulty: string; starter_code: string; test_cases?: { input: unknown; output: unknown }[] }
+export type Challenge = { id: number; title: string; prompt: string; language: string; difficulty: string; starter_code: string; completed?: boolean; test_cases?: { input: unknown; output: unknown }[] }
 export type News = { title: string; summary: string; url: string; source: string; kind: string }
 export type TestCaseResult = { input: unknown; expected: unknown; actual: unknown; passed: boolean }
 export type ReviewSnippet = { id: number; title: string; language: string; code: string; difficulty: string }

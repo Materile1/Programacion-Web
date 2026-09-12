@@ -26,8 +26,12 @@ def learning_path(db: Session = Depends(get_db), user: User = Depends(current_us
     path = db.scalar(select(LearningPath).options(selectinload(LearningPath.levels).selectinload(Level.challenges)))
     if not path:
         return []
+    completed_query = select(Submission.challenge_id).where(Submission.user_id == user.id, Submission.passed.is_(True))
+    completed_ids = set(db.scalars(completed_query).all()) if hasattr(db, "scalars") else set()
     for level in path.levels:
         level.status = level_status(level.number, user.level)
+        for challenge in getattr(level, "challenges", []):
+            challenge.completed = challenge.id in completed_ids
     return path.levels
 
 @router.get("/news", response_model=list[NewsOut])

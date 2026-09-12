@@ -19,7 +19,9 @@ npm install
 npm run dev
 ```
 
-Abre `http://localhost:5173`. Configura `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `VITE_GOOGLE_CLIENT_ID` en `.env` para iniciar sesión con Google. El frontend guarda el JWT en `localStorage` y el ejecutor usa el daemon Docker del host.
+Abre `http://localhost:5173`. Configura `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` y `VITE_GOOGLE_CLIENT_ID` en `.env` para iniciar sesión con Google. El frontend guarda el JWT en `localStorage`. La ejecución de retos usa un subprocess de Python con AST, timeout y límites de CPU/memoria; no necesita un socket Docker.
+
+El sandbox por subprocess es compatible con Render, pero ofrece un aislamiento menor que un contenedor: el proceso hereda el kernel y el usuario del servicio (en Linux intenta bajar a `nobody` cuando el proceso tiene privilegios), y los límites POSIX no existen en Windows. El bloqueo AST reduce imports y llamadas peligrosas, pero no debe considerarse una frontera de seguridad para código hostil de alto riesgo. Para ese nivel se necesitaría un servicio externo especializado o aislamiento de VM.
 
 ## Docker
 

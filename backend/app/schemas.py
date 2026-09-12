@@ -34,6 +34,7 @@ class ChallengeOut(BaseModel):
     difficulty: str
     starter_code: str
     test_cases: list[dict] = []
+    completed: bool = False
 
     @field_validator("test_cases", mode="before")
     @classmethod

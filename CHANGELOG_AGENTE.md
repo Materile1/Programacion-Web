@@ -1,5 +1,13 @@
 # Registro del agente
 
+## Tareas G-H - Sandbox Render y navegación - 2026-09-12
+
+- G: se eligió la opción A, un subprocess local de Python, porque funciona igual en Compose y Render sin asumir un socket Docker ni una API key externa. Cada caso usa `-I -S`, timeout de 5 segundos, límite POSIX de 128 MB de memoria y 5 segundos de CPU, stdin cerrado y, cuando el worker corre como root en Linux, intenta ejecutar como `nobody`.
+- G: se reemplazó el bloqueo por texto por recorrido AST de imports peligrosos (`os`, `subprocess`, `socket`, `shutil`, `ctypes`) y llamadas a `eval`, `exec`, `__import__` y `open`. Se conserva la interfaz `execute_code()` y los campos `stdout`, `stderr`, `passed`, `feedback` y `results`.
+- G: el aislamiento es menor que el de contenedor: el subprocess comparte kernel y entorno del servicio, los límites `resource` son POSIX y el análisis AST no es una frontera completa para código hostil. La documentación deja este riesgo explícito; para amenazas fuertes haría falta una VM o servicio especializado.
+- H: la ruta devuelve `completed` por reto según envíos aprobados del usuario. Práctica guiada muestra la posición dentro del nivel, permite volver al reto anterior y habilita el siguiente solo tras aprobación; el último reto aprobado ofrece el primer reto del siguiente nivel desbloqueado.
+- Verificado: runner focal en Docker (4 pruebas, incluyendo válido, fallo, sintaxis, import peligroso y timeout), suite backend completa (12 pasadas), Ruff en los archivos modificados, Alembic hasta head, build frontend Vite/TypeScript, ESLint y ausencia del socket Docker en Compose. La revisión visual autenticada del recorrido H queda como QA manual pendiente.
+
 ## Tarea 1 - Despliegue
 
 - Hecho: se consolidó el despliegue monolítico; FastAPI sirve `frontend/dist`, las rutas `/api` quedan separadas, el build embebe `VITE_API_URL=/api`, Compose pasa las variables Vite y el seed es idempotente.
