@@ -66,3 +66,20 @@
 - Verificado localmente: el Dockerfile raíz recompila el frontend y la API; el servicio público actual sigue healthy.
 - Pendiente: hacer push manual del fix, esperar el nuevo deploy live y repetir la prueba OAuth. No se hizo ningún commit ni push.
 
+## Ronda de experiencia real - Tareas A-F
+
+- A: `dashboard/path` calcula estado por `user.level`; `Level.status` se conserva por compatibilidad de esquema pero se ignora. El seed ya no asigna estados demo. Se añadió la prueba de dos usuarios con rutas independientes.
+- B: usuarios nuevos empiezan en nivel `0` (primer nivel sembrado) y racha `0`. Migración `0007_user_defaults` cambia defaults futuros sin resetear cuentas existentes; se decidió conservar el progreso existente.
+- C: envíos exitosos actualizan `last_activity_at` y racha: mismo día no duplica, día consecutivo incrementa y cualquier hueco mayor a un día reinicia en 1. Migración `0006_user_activity`.
+- D: Overview visible consume progreso real, dominio promedio de skills y fecha actual; se eliminó tiempo enfocado y cifras demo de la vista activa.
+- E: los 15 retos tienen prompts completos, starters y casos coherentes; el seed actualiza contenido seed existente sin modificar contenido generado.
+- F: se añadió limpieza inmediata ante `401` y refresco de ruta/progreso tras enviar un reto. Queda pendiente el recorrido visual autenticado contra producción después del siguiente deploy.
+
+### QA ejecutada
+
+- Dos cuentas locales nuevas: ambas empezaron con nivel interno `0`, racha `0`, cero envíos y solo el nivel `0` activo. Tras un envío exitoso de la primera, quedó en nivel interno `1`/racha `1` con nivel `1` activo; la segunda permaneció en nivel `0`/racha `0`/nivel `0` activo.
+- Navegación manual local: Resumen, Ruta, Práctica, Code Review, Entrevista y Perfil cargaron contenido; la recarga mantuvo la sesión; cerrar sesión y volver a entrar funcionó; el menú móvil abrió y cerró correctamente.
+- Contenido seed verificado: 15 retos, 0 prompts cortos, 5 snippets y 8 preguntas.
+- El `403` del widget Google visto en `localhost:5173` es esperado mientras ese origen no esté agregado en Google Cloud; la validación de producción requiere el siguiente deploy de estos cambios.
+- Validación final: backend Ruff + 9 tests, migraciones Alembic hasta `0007_user_defaults`, seed idempotente, frontend build Vite y ESLint en Docker. No se ejecutó `git add`, `git commit` ni `git push`.
+

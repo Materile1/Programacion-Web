@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime, timezone
+
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import current_user
@@ -12,6 +14,19 @@ router = APIRouter(prefix="/training", tags=["training"])
 progress_router = APIRouter(tags=["progress"])
 execution_router = APIRouter(tags=["training"])
 
+def update_streak(user: User, activity_at: datetime) -> None:
+    activity_day = activity_at.astimezone(timezone.utc).date()
+    if user.last_activity_at is None:
+        user.streak = 1
+    else:
+        last_day = user.last_activity_at.astimezone(timezone.utc).date()
+        gap = (activity_day - last_day).days
+        if gap > 1:
+            user.streak = 1
+        elif gap == 1:
+            user.streak += 1
+    user.last_activity_at = activity_at
+
 @router.post("/submit", response_model=SubmissionOut)
 @progress_router.post("/progress", response_model=SubmissionOut)
 def submit(payload: SubmissionRequest, db: Session = Depends(get_db), user: User = Depends(current_user)):
@@ -23,6 +38,7 @@ def submit(payload: SubmissionRequest, db: Session = Depends(get_db), user: User
     db.add(Submission(user_id=user.id, challenge_id=challenge.id, score=result.score, quality=result.quality, passed=execution.passed, feedback=execution.feedback))
     if execution.passed:
         user.level = max(user.level, challenge.level.number + 1)
+        update_streak(user, datetime.now(timezone.utc))
     db.commit()
     return SubmissionOut(passed=execution.passed, score=result.score, quality=result.quality, feedback=f"{result.label}. {execution.feedback}", next_review_at=result.next_review_at)
 

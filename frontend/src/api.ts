@@ -9,9 +9,14 @@ export type InterviewQuestion = { id: number; kind: 'conceptual' | 'coding'; pro
 export type InterviewSession = { id: number; questions: InterviewQuestion[] }
 export type InterviewAnswer = { question_id: number; score: number; feedback: string }
 export type InterviewSummary = { session_id: number; total_questions: number; answered_questions: number; score: number; answers: InterviewAnswer[] }
+export type Progress = { level: number; streak: number; completed_challenges: number; total_submissions: number; skill_breakdown: Record<string, number>; recent_submissions: { title: string; created_at: string; passed: boolean; score: number }[] }
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('devcoach_token')
   const response = await fetch(`${API_URL}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers ?? {}) } })
+  if (response.status === 401) {
+    localStorage.removeItem('devcoach_token')
+    window.dispatchEvent(new Event('devcoach:unauthorized'))
+  }
   if (!response.ok) throw new Error((await response.json().catch(() => null))?.detail ?? 'No se pudo conectar con DevCoach')
   return response.json()
 }

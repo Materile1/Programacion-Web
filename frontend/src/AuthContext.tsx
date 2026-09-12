@@ -16,6 +16,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api<User>('/auth/me').then(setUser).catch(() => { localStorage.removeItem('devcoach_token'); setToken(null) }).finally(() => setLoading(false))
   }, [token])
 
+  useEffect(() => {
+    const handleUnauthorized = () => { setUser(null); setToken(null); setLoading(false) }
+    window.addEventListener('devcoach:unauthorized', handleUnauthorized)
+    return () => window.removeEventListener('devcoach:unauthorized', handleUnauthorized)
+  }, [])
+
   const signInWithGoogle = async (response: CredentialResponse) => {
     if (!response.credential) throw new Error('Google no devolvió una credencial')
     const session = await api<{ access_token: string }>('/auth/google/callback', { method: 'POST', body: JSON.stringify({ id_token: response.credential }) })
