@@ -50,3 +50,19 @@
 - Render pendiente: la API key autentica, pero la cuenta consultada no tiene servicios (`/v1/services` devolvió cero); no se configuraron variables ni se disparó deploy.
 - Validación local: imagen raíz construida, Compose levantado, `/health`, `/`, rutas SPA, migraciones, seed idempotente, Ruff y 6 tests backend verificados; lint frontend con salida 0. No se hizo `git add`, `git commit` ni `git push`.
 
+## Despliegue Render - 2026-09-12
+
+- Confirmado: la API key pertenece al workspace `DevCoach` y ve `devcoach-api` (`srv-daid6o7qj5pc739k76f0`) y `devcoach-db` (`dpg-daid67fqj5pc739k4s50-a`, estado `available`).
+- Deploy live: `dep-daid9qlg1s2s73bjmirg`, commit `b7070e2eb021ae3bfad77063531451cb2c952742`, rama `main`.
+- URL pública: `https://devcoach-api-4gri.onrender.com`.
+- Variables configuradas vía API: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `VITE_GOOGLE_CLIENT_ID`, `VITE_API_URL=/api`, `CORS_ORIGINS=https://devcoach-api-4gri.onrender.com`. No había `OPENAI_API_KEY` ni `GEMINI_API_KEY` locales configuradas.
+- Verificado vía API/HTTP: `/health` devuelve `200` con estado `ok`; `/` devuelve React; logs Render muestran solicitudes periódicas `GET /health` con `200 OK`.
+- Pendiente del usuario: agregar `https://devcoach-api-4gri.onrender.com` en Google Cloud Console como Authorized JavaScript origin y confirmar que quedó guardado. Después se puede validar OAuth y el recorrido autenticado de producción.
+
+## Validación OAuth producción - 2026-09-12
+
+- Hallazgo: el sitio live cargaba, pero Google Identity Services registraba `Parameter client_id is not set correctly`. Las variables estaban presentes en Render, pero Vite las había necesitado durante el build y un Docker service no las inyectó como `ARG` automáticamente.
+- Corrección local pendiente de push: `frontend/src/main.tsx` obtiene el client ID desde `/api/auth/google/login` en runtime y conserva fallback a `VITE_GOOGLE_CLIENT_ID`; `frontend/src/api.ts` exporta la URL API.
+- Verificado localmente: el Dockerfile raíz recompila el frontend y la API; el servicio público actual sigue healthy.
+- Pendiente: hacer push manual del fix, esperar el nuevo deploy live y repetir la prueba OAuth. No se hizo ningún commit ni push.
+
